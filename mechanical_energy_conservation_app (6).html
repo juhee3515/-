@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중3 과학 - 역학적 에너지 보존 법칙 시뮬레이션</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for energy charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        .custom-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #cbd5e1;
+            border-radius: 5px;
+            outline: none;
+        }
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease;
+        }
+        .custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white shadow-lg py-4 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/20 p-2.5 rounded-xl backdrop-blur-md">
+                    <i class="fa-solid fa-atom text-2xl text-yellow-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight">중3 과학: 역학적 에너지 보존 법칙</h1>
+                    <p class="text-xs text-blue-200">Perfect Conservation Math Engine Applied (정밀 에너지 수치 보정 완료)</p>
+                </div>
+            </div>
+            <!-- Mode Switcher & Admin Control -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div id="modeGroup" class="flex bg-blue-900/50 p-1.5 rounded-xl border border-white/20">
+                    <button id="modeFreeFall" class="mode-btn px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-md">
+                        <i class="fa-solid fa-circle-down mr-1.5"></i>자유 낙하 모드
+                    </button>
+                    <button id="modeRollerCoaster" class="mode-btn px-4 py-2 rounded-lg text-sm font-bold text-white hover:bg-white/10 transition-all">
+                        <i class="fa-solid fa-train-subway mr-1.5"></i>롤러코스터 모드
+                    </button>
+                </div>
+                <!-- Admin Lock Toggle Button -->
+                <button id="btnAdminToggle" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all">
+                    <i class="fa-solid fa-lock" id="adminLockIcon"></i>
+                    <span id="adminLockText">학생 잠금 모드</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        
+        <!-- LEFT COLUMN: Canvas Simulation + Controls -->
+        <section class="lg:col-span-7 flex flex-col gap-5">
+            <!-- Simulation Canvas Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <!-- Toolbar -->
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+                    <div class="flex items-center gap-2">
+                        <span id="simulationTitle" class="font-bold text-slate-700 text-sm flex items-center gap-1.5">
+                            <i class="fa-solid fa-play text-blue-600"></i> 자유 낙하 시뮬레이션
+                        </span>
+                        <span id="conservationStatusBadge" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            <i class="fa-solid fa-lock text-[10px] mr-1"></i>역학적 에너지 100% 보존 중
+                        </span>
+                    </div>
+
+                    <!-- Speed & View Options -->
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="flex items-center gap-1.5 text-slate-600 font-medium">
+                            <i class="fa-solid fa-gauge-high text-blue-600"></i>
+                            <span>재생 속도:</span>
+                            <span id="valSpeedText" class="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">1.00x</span>
+                        </div>
+                        <label class="flex items-center gap-1 text-slate-600 cursor-pointer font-medium">
+                            <input type="checkbox" id="chkGrid" checked class="rounded text-blue-600 focus:ring-blue-500">
+                            눈금선
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Canvas Area -->
+                <div class="relative bg-gradient-to-b from-sky-100 via-sky-50 to-emerald-50 aspect-[4/3] w-full overflow-hidden">
+                    <canvas id="simCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                    
+                    <!-- Overlay HUD Badge -->
+                    <div class="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-2 rounded-xl shadow-md border border-slate-200 text-xs space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span>
+                            <span class="text-slate-600 font-semibold">현재 높이 (h):</span>
+                            <span id="hudHeight" class="font-bold font-mono text-slate-800 text-sm">10.00 m</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                            <span class="text-slate-600 font-semibold">현재 속력 (v):</span>
+                            <span id="hudVelocity" class="font-bold font-mono text-slate-800 text-sm">0.00 m/s</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                            <span class="text-slate-600 font-semibold">중력 가속도 (g):</span>
+                            <span class="font-bold font-mono text-slate-800 text-sm">9.8 m/s²</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Legend -->
+                    <div class="absolute bottom-3 right-3 bg-white/85 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 text-xs flex gap-3 text-slate-600">
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-500 rounded-sm"></span>위치에너지</div>
+                        <div class="flex items-center gap-1"><span class="w-3 h-3 bg-red-500 rounded-sm"></span>운동에너지</div>
+                        <div id="frictionLegend" class="flex items-center gap-1 hidden"><span class="w-3 h-3 bg-amber-500 rounded-sm"></span>열에너지(손실)</div>
+                    </div>
+                </div>
+
+                <!-- Simulation Control Buttons -->
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-3">
+                    <div class="flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <button id="btnPlayPause" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-play" id="playIcon"></i> <span id="playBtnText">시작</span>
+                            </button>
+                            <button id="btnStep" class="px-3 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-all flex items-center gap-1" title="1프레임 앞으로">
+                                <i class="fa-solid fa-forward-step"></i> 프레임 이동
+                            </button>
+                            <button id="btnReset" class="px-3 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs transition-all flex items-center gap-1">
+                                <i class="fa-solid fa-rotate-right"></i> 초기화
+                            </button>
+                        </div>
+
+                        <!-- Sliders & Direct Input Block (Admin Control target) -->
+                        <div id="adminSlidersGroup" class="flex-1 max-w-md grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <!-- Height Slider & Direct Input -->
+                            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <label class="font-bold text-slate-700">처음 높이 ($h_0$)</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="inputHeight" min="1" max="50" step="0.1" value="10.0" class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-600 focus:outline-none focus:border-blue-500">
+                                        <span class="font-bold text-slate-600">m</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="sliderHeight" min="1" max="50" step="0.1" value="10" class="w-full custom-slider">
+                            </div>
+
+                            <!-- Mass Slider & Direct Input -->
+                            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <label class="font-bold text-slate-700">질량 ($m$)</label>
+                                    <div class="flex items-center gap-1">
+                                        <input type="number" id="inputMass" min="0.001" max="10" step="0.001" value="0.100" class="w-20 px-1.5 py-0.5 border border-slate-300 rounded text-right font-mono font-bold text-blue-600 focus:outline-none focus:border-blue-500">
+                                        <span class="font-bold text-slate-600">kg</span>
+                                    </div>
+                                </div>
+                                <input type="range" id="sliderMass" min="0.001" max="10" step="0.001" value="0.100" class="w-full custom-slider">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ultra Slow Motion Speed Presets & Slider Bar -->
+                    <div id="adminSpeedGroup" class="bg-blue-50/70 p-3 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2 font-bold text-blue-900 shrink-0">
+                            <i class="fa-solid fa-stopwatch text-blue-600"></i>
+                            <span>초슬로우 모션 배속:</span>
+                        </div>
+                        
+                        <!-- Preset Buttons -->
+                        <div class="flex flex-wrap items-center gap-1">
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.01">0.01x</button>
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.02">0.02x</button>
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.05">0.05x</button>
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.10">0.10x</button>
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.25">0.25x</button>
+                            <button class="speed-btn px-2 py-1 bg-white hover:bg-blue-600 hover:text-white text-slate-700 font-mono font-bold rounded border border-slate-200 transition-all text-[11px]" data-speed="0.50">0.50x</button>
+                            <button class="speed-btn px-2 py-1 bg-blue-600 text-white font-mono font-bold rounded border border-blue-600 transition-all text-[11px]" data-speed="1.00">1.00x</button>
+                        </div>
+
+                        <!-- Continuous Speed Slider -->
+                        <div class="flex items-center gap-2 w-full md:w-48 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold">슬라이더:</span>
+                            <input type="range" id="sliderSpeed" min="0.01" max="1.00" step="0.01" value="1.00" class="w-full custom-slider">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Friction Settings Panel (Admin Target) -->
+            <div id="adminFrictionSection" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-lg">
+                        <i class="fa-solid fa-wind"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm">공기 저항 및 마찰력 설정</h4>
+                        <p class="text-xs text-slate-500">마찰 OFF 시 완벽한 수치 보정으로 $E_{total}$이 절대 변하지 않습니다.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggleFriction" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        <span class="ml-2 text-xs font-bold text-slate-700" id="lblFrictionStatus">마찰 없음 (완벽 보존)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Energy Trajectory Real-time Line Chart -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-indigo-600"></i> 시간 변화에 따른 에너지 전환 그래프
+                </h3>
+                <div class="h-44 w-full">
+                    <canvas id="energyChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Real-time Dynamic Math & Visual Energy Charts -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+            
+            <!-- Real-time Visual Charts Container (Bars + Pie Chart) -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-blue-600"></i> 실시간 에너지 시각화
+                    </h2>
+                    <span id="conservationHeaderBadge" class="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-700 font-bold rounded-lg border border-emerald-200">
+                        100.0% 완벽 보존 중
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <!-- Left: Dynamic Energy Bars (Col 7) -->
+                    <div class="md:col-span-7 space-y-3.5">
+                        <!-- Potential Energy Bar -->
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-blue-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-mountain"></i> 위치 에너지 ($E_p$)
+                                </span>
+                                <span id="barEpText" class="font-mono text-slate-700">0.98 J (100.0%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-4.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                                <div id="barEp" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-75" style="width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Kinetic Energy Bar -->
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-red-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-bolt"></i> 운동 에너지 ($E_k$)
+                                </span>
+                                <span id="barEkText" class="font-mono text-slate-700">0.00 J (0.0%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-4.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                                <div id="barEk" class="bg-gradient-to-r from-red-500 to-orange-500 h-full rounded-full transition-all duration-75" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Friction Bar -->
+                        <div id="thermalBarContainer" class="hidden">
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-amber-600 flex items-center gap-1">
+                                    <i class="fa-solid fa-fire text-amber-500"></i> 마찰 열에너지 ($E_{heat}$)
+                                </span>
+                                <span id="barEheatText" class="font-mono text-slate-700">0.00 J (0.0%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                                <div id="barEheat" class="bg-amber-500 h-full rounded-full transition-all duration-75" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Total Mechanical Energy Bar -->
+                        <div class="pt-2 border-t border-slate-100">
+                            <div class="flex justify-between text-xs font-bold mb-1">
+                                <span class="text-emerald-700 flex items-center gap-1">
+                                    <i class="fa-solid fa-shield-halved"></i> 전체 역학적 에너지 ($E_{total}$)
+                                </span>
+                                <span id="barEtotalText" class="font-mono text-emerald-800 text-sm font-black">0.98 J</span>
+                            </div>
+                            <div class="w-full bg-emerald-100 h-5.5 rounded-xl overflow-hidden p-0.5 border border-emerald-300">
+                                <div id="barEtotal" class="bg-gradient-to-r from-emerald-500 to-teal-600 h-full rounded-lg transition-all duration-75" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Dynamic Energy Pie Chart (Col 5) -->
+                    <div class="md:col-span-5 flex flex-col items-center justify-center p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span class="text-[11px] font-bold text-slate-500 mb-1">에너지 비율 (Pie)</span>
+                        <div class="w-28 h-28 relative">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mathematical Formula Live Substitution Box (Admin Target) -->
+            <div id="adminMathSection" class="bg-slate-900 text-white p-5 rounded-2xl shadow-md border border-slate-800 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h3 class="font-bold text-yellow-400 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-calculator"></i> 실시간 수식 연산 대입 과정
+                    </h3>
+                    <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700 font-mono">가속도 g = 9.8 m/s²</span>
+                </div>
+
+                <!-- Potential Energy Formula Box -->
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-blue-500/30 space-y-1.5">
+                    <div class="text-xs font-bold text-blue-400 flex justify-between">
+                        <span>위치에너지 ($E_p$) 연산</span>
+                        <span class="font-mono">$E_p = 9.8 \times m \times h$</span>
+                    </div>
+                    <div class="text-xs font-mono text-slate-300 bg-slate-950 p-2 rounded border border-slate-800">
+                        $E_p = 9.8 \times <span id="mathMass1" class="text-yellow-300">0.10</span> \times <span id="mathHeight" class="text-blue-300">10.00</span> = <span id="mathEpVal" class="text-blue-400 font-bold">0.98</span> \text{ J}$
+                    </div>
+                </div>
+
+                <!-- Kinetic Energy Formula Box -->
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-red-500/30 space-y-1.5">
+                    <div class="text-xs font-bold text-red-400 flex justify-between">
+                        <span>운동에너지 ($E_k$) 연산</span>
+                        <span class="font-mono">$E_k = \frac{1}{2} \times m \times v^2$</span>
+                    </div>
+                    <div class="text-xs font-mono text-slate-300 bg-slate-950 p-2 rounded border border-slate-800">
+                        $E_k = 0.5 \times <span id="mathMass2" class="text-yellow-300">0.10</span> \times (<span id="mathVelocity" class="text-red-300">0.00</span>)^2 = <span id="mathEkVal" class="text-red-400 font-bold">0.00</span> \text{ J}$
+                    </div>
+                </div>
+
+                <!-- Mechanical Energy Conservation Formula Box -->
+                <div class="bg-emerald-950/60 p-3 rounded-xl border border-emerald-500/40 space-y-1.5">
+                    <div class="text-xs font-bold text-emerald-400 flex justify-between">
+                        <span>역학적 에너지 보존 관계식</span>
+                        <span class="font-mono">$E_{total} = E_p + E_k$</span>
+                    </div>
+                    <div class="text-xs font-mono text-emerald-200 bg-slate-950 p-2 rounded border border-emerald-900/50 flex justify-between items-center">
+                        <span><span id="mathEpVal2" class="text-blue-400">0.98</span> + <span id="mathEkVal2" class="text-red-400">0.00</span> =</span>
+                        <span id="mathEtotalVal" class="text-emerald-400 text-sm font-bold">0.98 J (일정)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Concept Key Summary Card for Classroom (Admin Target) -->
+            <div id="adminSummarySection" class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-2xl border border-indigo-100 space-y-2 text-xs">
+                <h4 class="font-bold text-indigo-900 text-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb text-amber-500"></i> 중3 필수 개념 체크
+                </h4>
+                <ul class="space-y-1.5 text-slate-700">
+                    <li class="flex items-start gap-1.5">
+                        <i class="fa-solid fa-check text-indigo-600 mt-0.5"></i>
+                        <span><strong>감소한 위치에너지 = 증가한 운동에너지</strong>: 낙하할 때 줄어든 위치에너지량만큼 정확히 운동에너지가 증가합니다.</span>
+                    </li>
+                    <li class="flex items-start gap-1.5">
+                        <i class="fa-solid fa-check text-indigo-600 mt-0.5"></i>
+                        <span><strong>공기저항/마찰 무시 시</strong>: 어느 높이(위치)에서나 역학적 에너지의 합($E_p + E_k$)은 $100\%$ 일정합니다.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Mini Classroom Quiz Section (Admin Target) -->
+            <div id="adminQuizSection" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-to-square text-purple-600"></i> 학생용 개념 확인 퀴즈
+                    </h4>
+                    <span class="text-[11px] text-slate-500">실시간 풀이</span>
+                </div>
+                
+                <div id="quizContainer" class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-2">
+                    <p id="quizQuestion" class="font-bold text-slate-800">Q. 마찰이 없을 때, 0.1kg 물체가 최고 높이(10m)에서 낙하하여 중간 높이(5m)에 도달했습니다. 이때 운동 에너지는 얼마일까요?</p>
+                    <div id="quizOptions" class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="checkQuiz(0)" class="quiz-opt-btn bg-white hover:bg-slate-100 p-2 rounded-lg border border-slate-200 text-center font-mono font-medium">0 J</button>
+                        <button onclick="checkQuiz(0.49)" class="quiz-opt-btn bg-white hover:bg-slate-100 p-2 rounded-lg border border-slate-200 text-center font-mono font-medium">0.49 J</button>
+                        <button onclick="checkQuiz(0.98)" class="quiz-opt-btn bg-white hover:bg-slate-100 p-2 rounded-lg border border-slate-200 text-center font-mono font-medium">0.98 J</button>
+                        <button onclick="checkQuiz(0.245)" class="quiz-opt-btn bg-white hover:bg-slate-100 p-2 rounded-lg border border-slate-200 text-center font-mono font-medium">0.245 J</button>
+                    </div>
+                    <div id="quizResult" class="hidden p-2 rounded-lg text-center font-bold text-xs mt-2"></div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Admin Password Modal -->
+    <div id="adminPasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-amber-500"></i> 관리자 인증
+                </h3>
+                <button id="btnCloseModal" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-600">관리자 비밀번호를 입력하여 잠금을 해제하세요.<br><span class="text-slate-400 font-mono">(기본 비밀번호: 1234)</span></p>
+            <div class="space-y-2">
+                <input type="password" id="inputAdminPassword" placeholder="비밀번호 입력" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <p id="adminPwError" class="text-xs text-red-500 hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i>비밀번호가 일치하지 않습니다.</p>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="btnCancelPw" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">취소</button>
+                <button id="btnSubmitPw" class="flex-1 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold rounded-xl transition-all shadow-md">인증하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-100 border-t border-slate-200 py-4 px-6 text-center text-xs text-slate-500">
+        중학교 3학년 과학 교육용 시뮬레이션 — 역학적 에너지 보존 법칙 ($E = 9.8mh + \frac{1}{2}mv^2$)
+    </footer>
+
+    <!-- JavaScript Physics Core Engine & Dynamic Chart Code -->
+    <script>
+        // --- CONSTANTS & CONFIGURATION ---
+        const g = 9.8; // Standard gravity in m/s^2
+        const ADMIN_PASSWORD = "0118"; // Default admin password
+        
+        // --- STATE VARIABLES ---
+        let currentMode = 'freefall'; // 'freefall' or 'rollercoaster'
+        let isRunning = false;
+        let mass = 0.10; // kg
+        let initialHeight = 10; // meters
+        let currentHeight = 10; // meters
+        let velocity = 0; // m/s
+        let frictionEnabled = false;
+        let lostEnergy = 0; // Heat energy from friction
+        let time = 0;
+        let speedMultiplier = 1.0;
+        let showGrid = true;
+        let lastTimestamp = 0;
+        let rcX = 50; // Roller coaster X coordinate
+        let isAdminLocked = true; // Admin mode status: true = Student mode (Locked), false = Admin mode (Unlocked)
+
+        // Canvas & Context Setup
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        function applyAdminLockState() {
+            const btnAdminToggle = document.getElementById('btnAdminToggle');
+            const adminLockIcon = document.getElementById('adminLockIcon');
+            const adminLockText = document.getElementById('adminLockText');
+            
+            const adminTargets = [
+                document.getElementById('adminSlidersGroup'),
+                document.getElementById('adminSpeedGroup'),
+                document.getElementById('adminFrictionSection'),
+                document.getElementById('adminMathSection'),
+                document.getElementById('adminSummarySection'),
+                document.getElementById('adminQuizSection'),
+                document.getElementById('modeGroup')
+            ];
+
+            if (isAdminLocked) {
+                // Student Mode (Locked): Hide non-essential control features
+                btnAdminToggle.className = "bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all";
+                adminLockIcon.className = "fa-solid fa-lock";
+                adminLockText.textContent = "학생 잠금 모드";
+
+                adminTargets.forEach(el => {
+                    if(el) el.classList.add('hidden');
+                });
+            } else {
+                // Admin Mode (Unlocked): Show all advanced features
+                btnAdminToggle.className = "bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all";
+                adminLockIcon.className = "fa-solid fa-lock-open";
+                adminLockText.textContent = "관리자 모드 해제됨";
+
+                adminTargets.forEach(el => {
+                    if(el) el.classList.remove('hidden');
+                });
+            }
+        }
+
+        // --- DOM ELEMENTS ---
+        const sliderHeight = document.getElementById('sliderHeight');
+        const sliderMass = document.getElementById('sliderMass');
+        const inputHeight = document.getElementById('inputHeight');
+        const inputMass = document.getElementById('inputMass');
+        const btnPlayPause = document.getElementById('btnPlayPause');
+        const playIcon = document.getElementById('playIcon');
+        const playBtnText = document.getElementById('playBtnText');
+        const btnStep = document.getElementById('btnStep');
+        const btnReset = document.getElementById('btnReset');
+        const modeFreeFall = document.getElementById('modeFreeFall');
+        const modeRollerCoaster = document.getElementById('modeRollerCoaster');
+        const toggleFriction = document.getElementById('toggleFriction');
+        const lblFrictionStatus = document.getElementById('lblFrictionStatus');
+        const sliderSpeed = document.getElementById('sliderSpeed');
+        const valSpeedText = document.getElementById('valSpeedText');
+        const chkGrid = document.getElementById('chkGrid');
+
+        // Admin Modal DOM Elements
+        const btnAdminToggle = document.getElementById('btnAdminToggle');
+        const adminPasswordModal = document.getElementById('adminPasswordModal');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const btnCancelPw = document.getElementById('btnCancelPw');
+        const btnSubmitPw = document.getElementById('btnSubmitPw');
+        const inputAdminPassword = document.getElementById('inputAdminPassword');
+        const adminPwError = document.getElementById('adminPwError');
+
+        btnAdminToggle.addEventListener('click', () => {
+            if (isAdminLocked) {
+                inputAdminPassword.value = '';
+                adminPwError.classList.add('hidden');
+                adminPasswordModal.classList.remove('hidden');
+                inputAdminPassword.focus();
+            } else {
+                isAdminLocked = true;
+                applyAdminLockState();
+            }
+        });
+
+        function closeModal() {
+            adminPasswordModal.classList.add('hidden');
+        }
+
+        btnCloseModal.addEventListener('click', closeModal);
+        btnCancelPw.addEventListener('click', closeModal);
+
+        function verifyPassword() {
+            if (inputAdminPassword.value === ADMIN_PASSWORD) {
+                isAdminLocked = false;
+                applyAdminLockState();
+                closeModal();
+            } else {
+                adminPwError.classList.remove('hidden');
+            }
+        }
+
+        btnSubmitPw.addEventListener('click', verifyPassword);
+        inputAdminPassword.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') verifyPassword();
+        });
+
+        // Track Height profile function for Roller Coaster
+        function getRollerCoasterHeight(x, totalWidth) {
+            const normX = Math.max(0, Math.min(1, x / totalWidth));
+            if (normX < 0.15) return initialHeight;
+            const t = (normX - 0.15) / 0.85;
+            const h = initialHeight * 0.5 * (Math.cos(t * Math.PI * 2.2) + 1);
+            return Math.max(0.1, h);
+        }
+
+        // Chart Instances
+        let lineChartInstance = null;
+        let pieChartInstance = null;
+
+        function initCharts() {
+            // 1. Line Chart
+            const ctxLine = document.getElementById('energyChart').getContext('2d');
+            lineChartInstance = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '위치에너지 (Ep)',
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            data: [],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: true
+                        },
+                        {
+                            label: '운동에너지 (Ek)',
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            data: [],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: true
+                        },
+                        {
+                            label: '역학적에너지 (E_total)',
+                            borderColor: '#10b981',
+                            data: [],
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            pointRadius: 0,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { display: true, grid: { display: false } },
+                        y: { display: true, beginAtZero: true, title: { display: true, text: '에너지 (J)', font: { size: 10 } } }
+                    },
+                    plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } }
+                }
+            });
+
+            // 2. Pie Chart
+            const ctxPie = document.getElementById('pieChart').getContext('2d');
+            pieChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['위치', '운동', '마찰열'],
+                    datasets: [{
+                        data: [100, 0, 0],
+                        backgroundColor: ['#2563eb', '#ef4444', '#f59e0b'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '60%'
+                }
+            });
+        }
+
+        // --- PHYSICS STEP CALCULATIONS ---
+        function stepPhysics(dt) {
+            const scaledDt = dt * speedMultiplier;
+            time += scaledDt;
+
+            const totalInitialE = g * mass * initialHeight;
+
+            if (currentMode === 'freefall') {
+                if (!frictionEnabled) {
+                    currentHeight -= velocity * scaledDt + 0.5 * g * Math.pow(scaledDt, 2);
+                    if (currentHeight < 0) currentHeight = 0;
+                    velocity = Math.sqrt(Math.max(0, 2 * g * (initialHeight - currentHeight)));
+                    lostEnergy = 0;
+                } else {
+                    const drag = 0.05 * velocity * velocity;
+                    const netAcc = Math.max(0, g - drag / mass);
+                    velocity += netAcc * scaledDt;
+                    currentHeight -= velocity * scaledDt;
+                    if (currentHeight < 0) currentHeight = 0;
+                    
+                    const ep = g * mass * currentHeight;
+                    const ek = 0.5 * mass * velocity * velocity;
+                    lostEnergy = Math.max(0, totalInitialE - (ep + ek));
+                }
+
+                if (currentHeight <= 0) {
+                    currentHeight = 0;
+                    isRunning = false;
+                    playIcon.className = "fa-solid fa-play";
+                    playBtnText.textContent = "시작";
+                }
+            } else if (currentMode === 'rollercoaster') {
+                const totalW = canvas.width || 600;
+                rcX += (velocity * 25 + 15) * scaledDt;
+                if (rcX >= totalW - 30) {
+                    rcX = totalW - 30;
+                    isRunning = false;
+                    playIcon.className = "fa-solid fa-play";
+                    playBtnText.textContent = "시작";
+                }
+
+                currentHeight = getRollerCoasterHeight(rcX, totalW);
+
+                if (!frictionEnabled) {
+                    velocity = Math.sqrt(Math.max(0, 2 * g * (initialHeight - currentHeight)));
+                    lostEnergy = 0;
+                } else {
+                    lostEnergy += 0.002 * mass * g * (velocity + 1) * scaledDt * 10;
+                    const availE = Math.max(0, totalInitialE - (g * mass * currentHeight) - lostEnergy);
+                    velocity = Math.sqrt((2 * availE) / mass);
+                }
+            }
+        }
+
+        // --- DRAWING FUNCTIONS ---
+        function drawGrid(w, h, maxMeter) {
+            ctx.save();
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+            ctx.lineWidth = 1;
+            ctx.font = "10px sans-serif";
+            ctx.fillStyle = "#64748b";
+
+            const meterStep = maxMeter > 20 ? 5 : 2;
+            const pxPerMeter = (h - 60) / maxMeter;
+
+            for (let m = 0; m <= maxMeter; m += meterStep) {
+                const y = h - 30 - (m * pxPerMeter);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+                ctx.fillText(m + "m", 10, y - 3);
+            }
+            ctx.restore();
+        }
+
+        function drawFreeFall(w, h) {
+            const maxMeter = Math.max(initialHeight * 1.15, 12);
+            if (showGrid) drawGrid(w, h, maxMeter);
+
+            const groundY = h - 30;
+            const topY = 30;
+            const usableH = groundY - topY;
+            const pxPerMeter = usableH / maxMeter;
+
+            // Ground Line
+            ctx.fillStyle = "#10b981";
+            ctx.fillRect(0, groundY, w, 30);
+            ctx.fillStyle = "#047857";
+            ctx.fillRect(0, groundY, w, 3);
+
+            // Ball Position
+            const ballX = w / 2;
+            const ballY = groundY - (currentHeight * pxPerMeter);
+
+            // Ball Shadow
+            ctx.beginPath();
+            const shadowRadius = Math.max(4, 18 * (currentHeight / maxMeter));
+            ctx.ellipse(ballX, groundY + 10, shadowRadius, shadowRadius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(0,0,0,0.15)";
+            ctx.fill();
+
+            // Height Guide line
+            ctx.strokeStyle = "#3b82f6";
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(ballX, groundY);
+            ctx.lineTo(ballX, ballY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Ball Draw
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, 16, 0, Math.PI * 2);
+            ctx.fillStyle = "#2563eb";
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#ffffff";
+            ctx.stroke();
+
+            // Velocity Vector Arrow
+            if (velocity > 0.1) {
+                const arrowLen = Math.min(velocity * 4, 80);
+                ctx.strokeStyle = "#ef4444";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(ballX, ballY);
+                ctx.lineTo(ballX, ballY + arrowLen);
+                ctx.stroke();
+
+                // Arrow Head
+                ctx.fillStyle = "#ef4444";
+                ctx.beginPath();
+                ctx.moveTo(ballX - 6, ballY + arrowLen - 2);
+                ctx.lineTo(ballX + 6, ballY + arrowLen - 2);
+                ctx.lineTo(ballX, ballY + arrowLen + 8);
+                ctx.fill();
+            }
+        }
+
+        function drawRollerCoaster(w, h) {
+            const maxMeter = Math.max(initialHeight * 1.15, 12);
+            if (showGrid) drawGrid(w, h, maxMeter);
+
+            const groundY = h - 30;
+            const usableH = groundY - 30;
+            const pxPerMeter = usableH / maxMeter;
+
+            // Ground
+            ctx.fillStyle = "#10b981";
+            ctx.fillRect(0, groundY, w, 30);
+
+            // Track Path
+            ctx.beginPath();
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#475569";
+            for (let x = 0; x <= w; x += 2) {
+                const heightM = getRollerCoasterHeight(x, w);
+                const py = groundY - (heightM * pxPerMeter);
+                if (x === 0) ctx.moveTo(x, py);
+                else ctx.lineTo(x, py);
+            }
+            ctx.stroke();
+
+            // Roller Coaster Cart
+            const cartY = groundY - (currentHeight * pxPerMeter);
+            
+            ctx.fillStyle = "#2563eb";
+            ctx.beginPath();
+            ctx.roundRect(rcX - 16, cartY - 16, 32, 16, 4);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Cart Wheels
+            ctx.fillStyle = "#0f172a";
+            ctx.beginPath();
+            ctx.arc(rcX - 10, cartY, 4, 0, Math.PI * 2);
+            ctx.arc(rcX + 10, cartY, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // --- UI & UI UPDATES ---
+        function updatePhysicsAndUI() {
+            const totalE = g * mass * initialHeight;
+            const ep = g * mass * currentHeight;
+            let ek = Math.max(0, totalE - ep - lostEnergy);
+            if (!frictionEnabled) ek = Math.max(0, totalE - ep);
+
+            // HUD
+            document.getElementById('hudHeight').textContent = currentHeight.toFixed(2) + " m";
+            document.getElementById('hudVelocity').textContent = velocity.toFixed(2) + " m/s";
+
+            // Bars & Percentages
+            const epPct = totalE > 0 ? Math.min(100, Math.max(0, (ep / totalE) * 100)) : 0;
+            const ekPct = totalE > 0 ? Math.min(100, Math.max(0, (ek / totalE) * 100)) : 0;
+            const heatPct = totalE > 0 ? Math.min(100, Math.max(0, (lostEnergy / totalE) * 100)) : 0;
+
+            document.getElementById('barEp').style.width = epPct + "%";
+            document.getElementById('barEk').style.width = ekPct + "%";
+            document.getElementById('barEpText').textContent = `${ep.toFixed(2)} J (${epPct.toFixed(1)}%)`;
+            document.getElementById('barEkText').textContent = `${ek.toFixed(2)} J (${ekPct.toFixed(1)}%)`;
+
+            const currentMechE = ep + ek;
+            document.getElementById('barEtotalText').textContent = `${currentMechE.toFixed(2)} J`;
+
+            if (frictionEnabled) {
+                document.getElementById('thermalBarContainer').classList.remove('hidden');
+                document.getElementById('frictionLegend').classList.remove('hidden');
+                document.getElementById('barEheat').style.width = heatPct + "%";
+                document.getElementById('barEheatText').textContent = `${lostEnergy.toFixed(2)} J (${heatPct.toFixed(1)}%)`;
+            } else {
+                document.getElementById('thermalBarContainer').classList.add('hidden');
+                document.getElementById('frictionLegend').classList.add('hidden');
+            }
+
+            // Formula Substitutions
+            document.getElementById('mathMass1').textContent = mass.toFixed(3);
+            document.getElementById('mathMass2').textContent = mass.toFixed(3);
+            document.getElementById('mathHeight').textContent = currentHeight.toFixed(2);
+            document.getElementById('mathVelocity').textContent = velocity.toFixed(2);
+            document.getElementById('mathEpVal').textContent = ep.toFixed(2);
+            document.getElementById('mathEkVal').textContent = ek.toFixed(2);
+            document.getElementById('mathEpVal2').textContent = ep.toFixed(2);
+            document.getElementById('mathEkVal2').textContent = ek.toFixed(2);
+            document.getElementById('mathEtotalVal').textContent = `${currentMechE.toFixed(2)} J ${frictionEnabled ? '' : '(일정)'}`;
+
+            // Charts Update
+            if (lineChartInstance && isRunning) {
+                const label = time.toFixed(1) + "s";
+                if (lineChartInstance.data.labels.length > 40) {
+                    lineChartInstance.data.labels.shift();
+                    lineChartInstance.data.datasets[0].data.shift();
+                    lineChartInstance.data.datasets[1].data.shift();
+                    lineChartInstance.data.datasets[2].data.shift();
+                }
+                lineChartInstance.data.labels.push(label);
+                lineChartInstance.data.datasets[0].data.push(ep);
+                lineChartInstance.data.datasets[1].data.push(ek);
+                lineChartInstance.data.datasets[2].data.push(currentMechE);
+                lineChartInstance.update();
+            }
+
+            if (pieChartInstance) {
+                pieChartInstance.data.datasets[0].data = [ep, ek, lostEnergy];
+                pieChartInstance.update();
+            }
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            time = 0;
+            currentHeight = initialHeight;
+            velocity = 0;
+            lostEnergy = 0;
+            rcX = 50;
+
+            playIcon.className = "fa-solid fa-play";
+            playBtnText.textContent = "시작";
+
+            if (lineChartInstance) {
+                lineChartInstance.data.labels = [];
+                lineChartInstance.data.datasets[0].data = [];
+                lineChartInstance.data.datasets[1].data = [];
+                lineChartInstance.data.datasets[2].data = [];
+                lineChartInstance.update();
+            }
+
+            updatePhysicsAndUI();
+        }
+
+        // --- MAIN ANIMATION LOOP ---
+        function render(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+            lastTimestamp = timestamp;
+
+            if (isRunning) {
+                stepPhysics(dt);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (currentMode === 'freefall') {
+                drawFreeFall(canvas.width, canvas.height);
+            } else {
+                drawRollerCoaster(canvas.width, canvas.height);
+            }
+
+            updatePhysicsAndUI();
+            requestAnimationFrame(render);
+        }
+
+        // --- INPUT LISTENERS & EVENT BINDINGS ---
+        function setHeight(val) {
+            let num = parseFloat(val);
+            if (isNaN(num) || num <= 0) return;
+            initialHeight = num;
+            sliderHeight.value = Math.min(50, initialHeight);
+            inputHeight.value = initialHeight.toFixed(2);
+            resetSimulation();
+        }
+
+        function setMass(val) {
+            let num = parseFloat(val);
+            if (isNaN(num) || num <= 0) return;
+            mass = num;
+            sliderMass.value = Math.min(10, mass);
+            inputMass.value = mass.toFixed(3);
+            resetSimulation();
+        }
+
+        function setSpeed(val) {
+            speedMultiplier = parseFloat(val);
+            sliderSpeed.value = speedMultiplier;
+            valSpeedText.textContent = speedMultiplier.toFixed(2) + "x";
+        }
+
+        sliderHeight.addEventListener('input', (e) => setHeight(e.target.value));
+        inputHeight.addEventListener('change', (e) => setHeight(e.target.value));
+
+        sliderMass.addEventListener('input', (e) => setMass(e.target.value));
+        inputMass.addEventListener('change', (e) => setMass(e.target.value));
+
+        sliderSpeed.addEventListener('input', (e) => setSpeed(e.target.value));
+
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', () => setSpeed(btn.dataset.speed));
+        });
+
+        btnPlayPause.addEventListener('click', () => {
+            if (currentHeight <= 0 || (currentMode === 'rollercoaster' && rcX >= canvas.width - 40)) {
+                resetSimulation();
+            }
+            isRunning = !isRunning;
+            if (isRunning) {
+                playIcon.className = "fa-solid fa-pause";
+                playBtnText.textContent = "일시정지";
+            } else {
+                playIcon.className = "fa-solid fa-play";
+                playBtnText.textContent = "계속";
+            }
+        });
+
+        btnStep.addEventListener('click', () => {
+            isRunning = false;
+            playIcon.className = "fa-solid fa-play";
+            playBtnText.textContent = "계속";
+            stepPhysics(0.03);
+            updatePhysicsAndUI();
+        });
+
+        btnReset.addEventListener('click', resetSimulation);
+
+        modeFreeFall.addEventListener('click', () => {
+            currentMode = 'freefall';
+            modeFreeFall.className = "mode-btn px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-md";
+            modeRollerCoaster.className = "mode-btn px-4 py-2 rounded-lg text-sm font-bold text-white hover:bg-white/10 transition-all";
+            document.getElementById('simulationTitle').innerHTML = '<i class="fa-solid fa-circle-down text-blue-600"></i> 자유 낙하 시뮬레이션';
+            resetSimulation();
+        });
+
+        modeRollerCoaster.addEventListener('click', () => {
+            currentMode = 'rollercoaster';
+            modeRollerCoaster.className = "mode-btn px-4 py-2 rounded-lg text-sm font-bold transition-all bg-white text-blue-700 shadow-md";
+            modeFreeFall.className = "mode-btn px-4 py-2 rounded-lg text-sm font-bold text-white hover:bg-white/10 transition-all";
+            document.getElementById('simulationTitle').innerHTML = '<i class="fa-solid fa-train-subway text-blue-600"></i> 롤러코스터 시뮬레이션';
+            resetSimulation();
+        });
+
+        toggleFriction.addEventListener('change', (e) => {
+            frictionEnabled = e.target.checked;
+            lblFrictionStatus.textContent = frictionEnabled ? "공기저항/마찰 있음 (비보존계)" : "마찰 없음 (완벽 보존)";
+            lblFrictionStatus.className = frictionEnabled ? "ml-2 text-xs font-bold text-amber-600" : "ml-2 text-xs font-bold text-slate-700";
+            resetSimulation();
+        });
+
+        chkGrid.addEventListener('change', (e) => {
+            showGrid = e.target.checked;
+        });
+
+        // Quiz Handler
+        window.checkQuiz = function(answer) {
+            const resultDiv = document.getElementById('quizResult');
+            resultDiv.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-800', 'bg-red-100', 'text-red-800');
+
+            if (Math.abs(answer - 0.49) < 0.01) {
+                resultDiv.classList.add('bg-emerald-100', 'text-emerald-800');
+                resultDiv.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> 정답입니다! 최고점 위치에너지(0.98J) 중 절반인 0.49J이 위치에너지로 남아있으므로, 감소한 0.49J만큼 운동에너지로 변환되었습니다.';
+            } else {
+                resultDiv.classList.add('bg-red-100', 'text-red-800');
+                resultDiv.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> 오답입니다. $E_p = 9.8 \\times 0.1 \\times 5 = 0.49\\text{J}$ 이며, 감소한 위치에너지인 $0.98 - 0.49 = 0.49\\text{J}$ 가 곧 운동에너지입니다.';
+            }
+        };
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            resizeCanvas();
+            initCharts();
+            applyAdminLockState(); // Initialize in Student Mode (Locked)
+            resetSimulation();
+            requestAnimationFrame(render);
+        };
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
